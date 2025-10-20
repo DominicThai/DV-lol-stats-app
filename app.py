@@ -9,12 +9,10 @@ ui.page_opts(
 )
 
 with ui.nav_panel("A"):  
-    with ui.layout_columns():
-        ui.h2("test123")
-        
+    with ui.layout_columns():        
         @render.data_frame
         def champs_df():
-            return render.DataTable(champ_df, filters=True)
+            return render.DataGrid(champ_df, width='70%', filters=True)
 
 with ui.nav_panel("B"):  
     "Page B content"
