@@ -1,4 +1,4 @@
-from shared import app_dir, champ_df
+from shared import app_dir, champs_df, data
 from shiny import reactive
 from shiny.express import input, render, ui
 import seaborn as sns
@@ -12,7 +12,7 @@ with ui.nav_panel("A"):
     with ui.layout_columns():        
         @render.data_frame
         def champs_df():
-            return render.DataGrid(champ_df, width='70%', filters=True)
+            return render.DataGrid(champs_df, width='100%', summary=False)
 
 with ui.nav_panel("B"):  
     "Page B content"
