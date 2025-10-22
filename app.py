@@ -1,21 +1,37 @@
-from shared import app_dir, champs_df, data
+import shared 
 from shiny import reactive
 from shiny.express import input, render, ui
 import seaborn as sns
 from faicons import icon_svg
+import os
+import pandas as pd
+
 
 ui.page_opts(
-    title="App with navbar",  
+    title="PiDo.gg",  
 )
 
-with ui.nav_panel("A"):  
-    with ui.layout_columns():        
-        @render.data_frame
-        def champs_df():
-            return render.DataGrid(champs_df, width='100%', summary=False)
+ui.input_select(  
+        "select",  
+        "Change Game Patch:",  
+        {"champs.csv": "13.1", "penguins.csv": "13.2"},  
+    )  
 
-with ui.nav_panel("B"):  
-    "Page B content"
+with ui.navset_bar(title="", id="main_nav"):
 
-with ui.nav_panel("C"):  
-    "Page C content"
+    #Page 1
+    with ui.nav_panel("Champion Overview"):
+        with ui.layout_columns():
+            @render.data_frame
+            def champs_df():
+                df = shared.update_patch(input.select())
+                return render.DataGrid(df, width="100%")
+
+    #page2
+    with ui.nav_panel("Winrates"):
+        "Page B content"
+
+
+    #page3
+    with ui.nav_panel("Stats or somn"):
+        "Page C content"
