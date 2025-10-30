@@ -9,7 +9,7 @@ patch_file = "patch_13.1.csv"
 
 champ_df = pd.read_csv(app_dir / "data" / patch_file, sep=';')
 
-def update_patch(patch):
+def get_patch(patch):
     #Reads the file that is selected in the dropdown menu
     df = pd.read_csv(app_dir / "data" / patch, sep=';')
     
