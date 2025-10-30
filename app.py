@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 
+list_of_champions = shared.champ_df['Name'].tolist()
+list_of_champions = list(dict.fromkeys(list_of_champions))
+
+
 # This is the UI part of the app
 app_ui = ui.page_navbar(
 
@@ -26,7 +30,11 @@ app_ui = ui.page_navbar(
 
 
     # page 3
-    ui.nav_panel("C", "Page C content"),
+    ui.nav_panel("C",
+                 ui.input_select(
+                     "select_champ",
+                     "Choose Champion:",
+                     list_of_champions)),
     
     #Other stuff
     title="PiDo.gg",
@@ -124,5 +132,3 @@ def server(input, output, session):
 
 # Create the Shiny app object
 app=App(app_ui, server)
-
-print(shared.get_patch("patch_13.1.csv"))
