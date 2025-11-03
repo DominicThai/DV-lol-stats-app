@@ -31,10 +31,18 @@ app_ui = ui.page_navbar(
 
     # page 3
     ui.nav_panel("C",
-                 ui.input_select(
-                     "select_champ",
-                     "Choose Champion:",
-                     list_of_champions)),
+                 ui.layout_sidebar(
+                 ui.sidebar(
+                     ui.input_select("select_champ", "Choose Champion:", list_of_champions),
+                     ui.input_checkbox_group("select_metrics", "Select Metrics to Display:",
+                                            {"win_pct": "Win %", "pick_pct": "Pick %", "ban_pct": "Ban %"},),
+                     width="15%",),
+                 ui.output_plot("time_series_plot"),),
+),
+
+    # page 4
+    ui.nav_panel("D",),
+        
     
     #Other stuff
     title="PiDo.gg",
@@ -125,10 +133,28 @@ def server(input, output, session):
 
         return fig
     
-    
+    @ render.plot
+    def time_series_plot():
+        champ = "Ahri"
+        champ_df = shared.get_all_patches()
+
+        #This is regex magic, DON NO TOUCH THIS or this shit will break. It is so the patches are in correct order
+        patch_split = champ_df["patch"].str.extract(r"(\d+)\.(\d+)")
+        champ_df["patch_major"] = patch_split[0].astype(int)
+        champ_df["patch_minor"] = patch_split[1].astype(int)
+
+        champ_df = champ_df.sort_values(["patch_major", "patch_minor"])
+        champ_df = champ_df[champ_df["name"] == champ]
         
-
-
-
+        #Creates the plot
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(champ_df["patch"], champ_df["win_pct"], marker="o")
+        ax.set_title(f"{champ} - Win Rate over Patches")
+        ax.set_xlabel("Patch")
+        ax.set_ylabel("Win Rate (%)")
+        ax.grid(True)
+        return fig
+        
 # Create the Shiny app object
 app=App(app_ui, server)
+
