@@ -7,10 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 
-list_of_champions = shared.champ_df['Name'].tolist()
-list_of_champions = list(dict.fromkeys(list_of_champions))
-
-
 # This is the UI part of the app
 app_ui = ui.page_navbar(
 
@@ -33,10 +29,11 @@ app_ui = ui.page_navbar(
     ui.nav_panel("C",
                  ui.layout_sidebar(
                  ui.sidebar(
-                     ui.input_select("select_champ", "Choose Champion:", list_of_champions),
-                     ui.input_checkbox_group("select_metrics", "Select Metrics to Display:",
+                     ui.input_select("select_champ", "Choose Champion:", ["TOP"]),
+                     ui.input_checkbox_group("select_metrics", "Show:",
                                             {"win_pct": "Win %", "pick_pct": "Pick %", "ban_pct": "Ban %"},),
                      width="15%",),
+                 ui.input_radio_buttons("role_select", "Select Role", {"TOP": "Toplane", "JUNGLE": "Jungle", "MID": "Midlane", "ADC": "ADC", "SUPPORT": "Support"},),
                  ui.output_plot("time_series_plot"),),
 ),
 
@@ -135,25 +132,38 @@ def server(input, output, session):
     
     @ render.plot
     def time_series_plot():
-        champ = "Ahri"
+        champ = input.select_champ()
+        role = input.role_select()
+        selected_metrics = input.select_metrics()
         champ_df = shared.get_all_patches()
 
         #This is regex magic, DON NO TOUCH THIS or this shit will break. It is so the patches are in correct order
         patch_split = champ_df["patch"].str.extract(r"(\d+)\.(\d+)")
         champ_df["patch_major"] = patch_split[0].astype(int)
         champ_df["patch_minor"] = patch_split[1].astype(int)
-
         champ_df = champ_df.sort_values(["patch_major", "patch_minor"])
-        champ_df = champ_df[champ_df["name"] == champ]
         
+        #Only shows the champ in the chosen role, so no duplicates basically
+        champ_df = champ_df[(champ_df["name"] == champ) & (champ_df["role"] == role)]
+        print(input.select_metrics())
         #Creates the plot
         fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(champ_df["patch"], champ_df["win_pct"], marker="o")
+
+        for metric in selected_metrics:
+            if metric in champ_df.columns:
+                ax.plot(champ_df["patch"], champ_df[metric], marker="o", label=metric)
+
         ax.set_title(f"{champ} - Win Rate over Patches")
         ax.set_xlabel("Patch")
         ax.set_ylabel("Win Rate (%)")
         ax.grid(True)
         return fig
+    
+    @ reactive.effect
+    def update_champ_choices():
+        role = input.role_select()
+        champ_list = shared.get_champs_per_role(role)
+        ui.update_select(id="select_champ", choices=champ_list, session=session)
         
 # Create the Shiny app object
 app=App(app_ui, server)

@@ -60,3 +60,10 @@ def get_all_patches():
     combined_df["ban_pct"] = combined_df["ban_pct"].str.replace("%", "").astype(float)
     
     return combined_df
+
+def get_champs_per_role(role):
+    df = get_all_patches()
+    champs_list = df.loc[df['role'] == role, 'name'].tolist()
+    champs_list = list(dict.fromkeys(champs_list))
+    return champs_list
+    
