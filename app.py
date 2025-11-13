@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
+from shinywidgets import output_widget, render_widget  
 
 # This is the UI part of the app
 app_ui = ui.page_navbar(
@@ -38,7 +39,8 @@ app_ui = ui.page_navbar(
 ),
 
     # page 4
-    ui.nav_panel("D",),
+    ui.nav_panel("D",
+                        output_widget("bubble_plot"),),
         
     
     #Other stuff
@@ -157,6 +159,43 @@ def server(input, output, session):
         ax.set_xlabel("Patch")
         ax.set_ylabel("Win Rate (%)")
         ax.grid(True)
+        return fig
+    
+    @render_widget 
+    def bubble_plot():
+        # Get selected patch from the global input
+        patch = input.patch_select()  # e.g., "patch_13.1.csv"
+
+        # Get the data for this patch
+        df = shared.get_patch(patch)  # already returns only this patch
+
+        if df.empty:
+            return px.scatter(title=f"No data for {patch}")
+
+        # Create bubble chart
+        fig = px.scatter(
+            df,
+            x="pick_pct",            # X-axis: Pick %
+            y="win_pct",             # Y-axis: Win %
+            size="ban_pct",          # Bubble size: Ban %
+            color="class",           # Bubble color: Champion class
+            hover_name="name",       # Champion name on hover
+            hover_data={
+                "pick_pct": True,
+                "win_pct": True,
+                "ban_pct": True,
+                "class": True
+            },
+            title=f"Win % vs Pick % (Patch {patch})",
+            size_max=60              # Maximum bubble size
+        )
+
+        fig.update_layout(
+            xaxis_title="Pick %",
+            yaxis_title="Win %",
+            legend_title="Class",
+        )
+
         return fig
     
     @ reactive.effect
