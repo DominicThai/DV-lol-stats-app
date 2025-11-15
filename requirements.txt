@@ -3,3 +3,4 @@ shiny
 seaborn
 pandas
 plotly.express
+shinywidgets
