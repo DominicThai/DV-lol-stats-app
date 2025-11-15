@@ -1,7 +1,7 @@
 import shared
 from shiny import App, ui, reactive, render
 import seaborn as sns
-from faicons import icon_svg
+#from faicons import icon_svg
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,7 +40,12 @@ app_ui = ui.page_navbar(
 
     # page 4
     ui.nav_panel("D",
-                        output_widget("bubble_plot"),),
+                        output_widget("bubble_plot"),
+                        output_widget("role_bubble_plot"),),
+    
+    #page 5
+    ui.nav_panel("E",
+                 output_widget("role_area_chart"),),
         
     
     #Other stuff
@@ -194,6 +199,85 @@ def server(input, output, session):
             xaxis_title="Pick %",
             yaxis_title="Win %",
             legend_title="Class",
+        )
+
+        return fig
+    
+    @render_widget
+    def role_area_chart():
+        df = shared.get_all_patches()   # <-- your existing combined-data function
+
+        # Extract and sort patch numbers
+        patch_split = df["patch"].str.extract(r"(\d+)\.(\d+)")
+        df["patch_major"] = patch_split[0].astype(int)
+        df["patch_minor"] = patch_split[1].astype(int)
+        df = df.sort_values(["patch_major", "patch_minor"])
+
+        # Group by patch + role
+        role_df = (
+            df.groupby(["patch", "role"])
+            .agg(total_pick_pct=("pick_pct", "sum"))
+            .reset_index()
+        )
+
+        fig = px.area(
+            role_df,
+            x="patch",
+            y="total_pick_pct",
+            color="role",
+            title="Role Share of Total Pick % Over Time",
+            line_group="role",
+        )
+
+        fig.update_layout(
+            xaxis_title="Patch",
+            yaxis_title="Pick % Share",
+            hovermode="x unified",
+            legend_title="Role"
+        )
+
+        return fig
+    
+    @render_widget
+    def role_bubble_plot():
+        # Get selected patch from the global selector
+        patch = input.patch_select()
+        df = shared.get_patch(patch)  # returns DataFrame for selected patch
+
+        # Aggregate by role
+        role_summary = (
+            df.groupby("role")
+            .agg({
+                "pick_pct": "sum",      # total pick % for the role
+                "win_pct": "mean",      # average win % for the role
+                "ban_pct": "mean"       # average ban % for the role
+            })
+            .reset_index()
+        )
+        
+        # Normalize pick_pct so total across roles = 100%
+        total_pick = role_summary["pick_pct"].sum()
+        role_summary["pick_pct"] = (role_summary["pick_pct"] / total_pick) * 100
+
+        # Create bubble chart
+        fig = px.scatter(
+            role_summary,
+            x="pick_pct",
+            y="win_pct",
+            size="ban_pct",
+            color="role",
+            hover_name="role",
+            size_max=120,
+            title=f"Role Meta Bubble Chart — Patch {patch.replace('patch_','').replace('.csv','')}",
+            labels={"Role": "Role"}
+        )
+
+        fig.update_layout(
+            xaxis_title="Pick %",
+            yaxis_title="Win %",
+            template="plotly_white",
+            legend_title="Role",
+            hovermode="closest"
         )
 
         return fig
