@@ -49,7 +49,7 @@ app_ui = ui.page_navbar(
         
     
     #Other stuff
-    title="PiDo.gg",
+    title="DoPi.gg",
     id="page",
     header=ui.input_select(
         "patch_select",
