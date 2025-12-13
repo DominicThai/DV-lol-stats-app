@@ -7,16 +7,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 from shinywidgets import output_widget, render_widget  
+import base64
+from ipywidgets import Image
 
 # This is the UI part of the app
 app_ui = ui.page_navbar(
 
     # Page 1
-    ui.nav_panel("A",
+    ui.nav_panel("Dataset",
         ui.card(ui.output_data_frame("champ_df"), height="600px")),
 
     # page 2
-    ui.nav_panel("B",
+    ui.nav_panel("Bar graphs",
                 ui.h2("Top 10 Champions by Pick %"),
                 ui.row(
                     ui.column(4, ui.output_plot("top10_win")),
@@ -27,7 +29,7 @@ app_ui = ui.page_navbar(
 
 
     # page 3
-    ui.nav_panel("C",
+    ui.nav_panel("Time Series plot",
                  ui.layout_sidebar(
                  ui.sidebar(
                      ui.input_select("select_champ", "Choose Champion:", ["TOP"]),
@@ -39,23 +41,30 @@ app_ui = ui.page_navbar(
 ),
 
     # page 4
-    ui.nav_panel("D",
+    ui.nav_panel("Bubble Graphs",
                         output_widget("bubble_plot"),
-                        output_widget("role_bubble_plot"),),
+                        output_widget("role_bubble_plot"),
+                        output_widget("winrate_vs_ban_plot")),
     
     #page 5
-    ui.nav_panel("E",
+    ui.nav_panel("Area chart",
                  output_widget("role_area_chart"),),
 
     # page 6
-    ui.nav_panel("F",
+    ui.nav_panel("Pie charts",
     ui.row(
         ui.column(6, output_widget("pie_chart_class_ban")),
         ui.column(6, output_widget("pie_chart_ban")),
         ui.column(6, output_widget("pie_chart_ranks")),
     ),
 ),
+    # page 7
+    ui.nav_panel("AI generated",
+                 output_widget("ai_generated"),),
     
+    #page 8
+    ui.nav_panel("Animated",
+                 output_widget("pie_chart_ban"),),
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -388,15 +397,15 @@ def server(input, output, session):
         df = shared.get_patch(input.patch_select())
 
         if df.empty or "Tier" not in df.columns:
-            return px.pie(title="No S-tier data available")
+            return px.pie(title="No GOD-tier data available")
 
-        s_tier_df = df[df["Tier"] == "S"]
+        god_tier_df = df[df["Tier"] == "God"]
 
-        if s_tier_df.empty:
-            return px.pie(title="No S-tier champions in this patch")
+        if god_tier_df.empty:
+            return px.pie(title="No God-tier champions in this patch")
 
         class_df = (
-            s_tier_df.groupby("class", as_index=False)
+            god_tier_df.groupby("class", as_index=False)
                     .agg(count=("name", "count"))
                     .sort_values("count", ascending=False)
         )
@@ -407,7 +416,7 @@ def server(input, output, session):
             class_df,
             values="count",
             names="class",
-            title=f"S-Tier Champion Share by Class — Patch {patch_label}",
+            title=f"God-Tier Champion Share by Class — Patch {patch_label}",
             hole=0.3
         )
 
@@ -422,8 +431,46 @@ def server(input, output, session):
         )
 
         return fig
-        
+    
+    @render_widget
+    def winrate_vs_ban_plot():
+        df = shared.get_patch(input.patch_select())
 
+        if df.empty:
+            return px.scatter(title="No data available")
+
+        fig = px.scatter(
+            df,
+            x="win_pct",
+            y="ban_pct",
+            color="class",
+            size="pick_pct",
+            hover_name="name",
+            title="Champion Ban Pressure vs Win Rate",
+            labels={
+                "win_pct": "Win Rate (%)",
+                "ban_pct": "Ban Rate (%)",
+                "pick_pct": "Pick Rate (%)",
+                "class": "Class"
+            },
+            size_max=40,
+        )
+
+        fig.update_layout(
+            xaxis_title="Win Rate (%)",
+            yaxis_title="Ban Rate (%)",
+            hovermode="closest",
+            height=600
+        )
+
+        return fig
+    @render_widget
+    def ai_generated():
+        with open("data/ai_slop.png", "rb") as f:
+            return Image(
+                value=base64.b64decode(base64.b64encode(f.read())),
+                format="png"
+            )
     @ reactive.effect
     def update_champ_choices():
         role = input.role_select()
