@@ -54,6 +54,10 @@ app_ui = ui.page_navbar(
         ui.column(6, output_widget("pie_chart_class_ban")),
     ),
 ),
+    ui.nav_panel(
+        "G",
+        output_widget("winrate_dps_meter"),
+),
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -225,7 +229,7 @@ def server(input, output, session):
             .agg(class_pick_pct=("pick_pct", "sum"))
         )
 
-        # Normalize so each patch sums to 100%
+        # Normalize so each patch sums to 100% and doesn't go above that
         class_df["total_patch_pick"] = (
             class_df.groupby("patch")["class_pick_pct"].transform("sum")
         )
@@ -381,7 +385,59 @@ def server(input, output, session):
 
         return fig
 
-                       
+    @render_widget
+    def winrate_dps_meter():
+        df = shared.get_all_patches()  # contains columns: patch, name, win_pct, pick_pct, class, etc.
+        df = df[df["pick_pct"] >= 1.0]       
+        df_plot = df[["patch", "name", "win_pct"]]    
+        df_plot = (
+            df_plot.sort_values(["patch", "win_pct"], ascending=[True, False])
+            .groupby("patch")
+            .head(20)
+        )
+
+        # New: Extract unique patches and sort them numerically (major.minor)
+        unique_patches = sorted(
+            df_plot["patch"].unique(),
+            key=lambda x: [int(part) for part in x.split(".")]
+        )
+
+        #Convert patch to ordered categorical to enforce frame order in animation since plotly takes issue with the patch names
+        df_plot["patch"] = pd.Categorical(
+            df_plot["patch"],
+            categories=unique_patches,
+            ordered=True
+        )
+
+        fig = px.bar(
+            df_plot,
+            x="win_pct",
+            y="name",
+            orientation="h",
+            color="name",                 
+            animation_frame="patch",
+            animation_group="name",
+            range_x=[45, 60],             
+            title="Top 20 Champions by Win Rate Over Patches",
+            labels={"win_pct": "Win Rate (%)", "name": "Champion", "patch": "Patch"},
+        ) 
+
+        fig.update_layout(
+            yaxis={"autorange": 'min reversed'},  # highest win rate on top
+            xaxis_title="Win Rate (%)",
+            yaxis_title="Names",
+            transition={"duration": 500, "easing": "linear"},
+            showlegend=False,
+            height=700,
+        )
+
+        fig.update_traces(
+            texttemplate="%{x:.1f}%",
+            textposition="outside",
+            cliponaxis=False,
+        )   
+
+        return fig      
     
 
     @ reactive.effect
