@@ -50,14 +50,12 @@ app_ui = ui.page_navbar(
     # page 6
     ui.nav_panel("F",
     ui.row(
-        ui.column(6, output_widget("pie_chart_ban")),
         ui.column(6, output_widget("pie_chart_class_ban")),
+        ui.column(6, output_widget("pie_chart_ban")),
+        ui.column(6, output_widget("pie_chart_ranks")),
     ),
 ),
-    ui.nav_panel(
-        "G",
-        output_widget("winrate_dps_meter"),
-),
+    
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -384,61 +382,47 @@ def server(input, output, session):
         )
 
         return fig
-
+    
     @render_widget
-    def winrate_dps_meter():
-        df = shared.get_all_patches()  # contains columns: patch, name, win_pct, pick_pct, class, etc.
-        df = df[df["pick_pct"] >= 1.0]       
-        df_plot = df[["patch", "name", "win_pct"]]    
-        df_plot = (
-            df_plot.sort_values(["patch", "win_pct"], ascending=[True, False])
-            .groupby("patch")
-            .head(20)
+    def pie_chart_ranks():
+        df = shared.get_patch(input.patch_select())
+
+        if df.empty or "Tier" not in df.columns:
+            return px.pie(title="No S-tier data available")
+
+        s_tier_df = df[df["Tier"] == "S"]
+
+        if s_tier_df.empty:
+            return px.pie(title="No S-tier champions in this patch")
+
+        class_df = (
+            s_tier_df.groupby("class", as_index=False)
+                    .agg(count=("name", "count"))
+                    .sort_values("count", ascending=False)
         )
 
-        # New: Extract unique patches and sort them numerically (major.minor)
-        unique_patches = sorted(
-            df_plot["patch"].unique(),
-            key=lambda x: [int(part) for part in x.split(".")]
-        )
+        patch_label = input.patch_select().replace("patch_", "").replace(".csv", "")
 
-        #Convert patch to ordered categorical to enforce frame order in animation since plotly takes issue with the patch names
-        df_plot["patch"] = pd.Categorical(
-            df_plot["patch"],
-            categories=unique_patches,
-            ordered=True
-        )
-
-        fig = px.bar(
-            df_plot,
-            x="win_pct",
-            y="name",
-            orientation="h",
-            color="name",                 
-            animation_frame="patch",
-            animation_group="name",
-            range_x=[45, 60],             
-            title="Top 20 Champions by Win Rate Over Patches",
-            labels={"win_pct": "Win Rate (%)", "name": "Champion", "patch": "Patch"},
-        ) 
-
-        fig.update_layout(
-            yaxis={"autorange": 'min reversed'},  # highest win rate on top
-            xaxis_title="Win Rate (%)",
-            yaxis_title="Names",
-            transition={"duration": 500, "easing": "linear"},
-            showlegend=False,
-            height=700,
+        fig = px.pie(
+            class_df,
+            values="count",
+            names="class",
+            title=f"S-Tier Champion Share by Class — Patch {patch_label}",
+            hole=0.3
         )
 
         fig.update_traces(
-            texttemplate="%{x:.1f}%",
-            textposition="outside",
-            cliponaxis=False,
-        )   
+            textinfo="percent+label",
+            textposition="inside",
+        )
 
-        return fig      
-    
+        fig.update_layout(
+            legend_title="Class",
+            showlegend=True,
+        )
+
+        return fig
+        
 
     @ reactive.effect
     def update_champ_choices():
