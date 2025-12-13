@@ -46,8 +46,14 @@ app_ui = ui.page_navbar(
     #page 5
     ui.nav_panel("E",
                  output_widget("role_area_chart"),),
-        
-    
+
+    # page 6
+    ui.nav_panel("F",
+    ui.row(
+        ui.column(6, output_widget("pie_chart_ban")),
+        ui.column(6, output_widget("pie_chart_class_ban")),
+    ),
+),
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -205,7 +211,7 @@ def server(input, output, session):
     
     @render_widget
     def role_area_chart():
-        df = shared.get_all_patches()   # <-- your existing combined-data function
+        df = shared.get_all_patches()
 
         # Extract and sort patch numbers
         patch_split = df["patch"].str.extract(r"(\d+)\.(\d+)")
@@ -213,30 +219,39 @@ def server(input, output, session):
         df["patch_minor"] = patch_split[1].astype(int)
         df = df.sort_values(["patch_major", "patch_minor"])
 
-        # Group by patch + role
-        role_df = (
-            df.groupby(["patch", "role"])
-            .agg(total_pick_pct=("pick_pct", "sum"))
-            .reset_index()
+        # Aggregate pick % by patch + class
+        class_df = (
+            df.groupby(["patch", "class"], as_index=False)
+            .agg(class_pick_pct=("pick_pct", "sum"))
+        )
+
+        # Normalize so each patch sums to 100%
+        class_df["total_patch_pick"] = (
+            class_df.groupby("patch")["class_pick_pct"].transform("sum")
+        )
+
+        class_df["pick_share_pct"] = (
+            class_df["class_pick_pct"] / class_df["total_patch_pick"] * 100
         )
 
         fig = px.area(
-            role_df,
+            class_df,
             x="patch",
-            y="total_pick_pct",
-            color="role",
-            title="Role Share of Total Pick % Over Time",
-            line_group="role",
+            y="pick_share_pct",
+            color="class",
+            title="Class Share of Total Pick % Over Time",
+            line_group="class",
         )
 
         fig.update_layout(
             xaxis_title="Patch",
             yaxis_title="Pick % Share",
             hovermode="x unified",
-            legend_title="Role"
+            legend_title="Class"
         )
 
         return fig
+
     
     @render_widget
     def role_bubble_plot():
@@ -282,6 +297,93 @@ def server(input, output, session):
 
         return fig
     
+    @render_widget
+    def pie_chart_ban():
+        df = shared.get_patch(input.patch_select())
+
+       
+        if df.empty:
+            return px.pie(title="No data available")
+
+        
+        pie_df = df.copy()
+
+        # Threshold: champions below this ban % go into "Other champions"
+        threshold = 1
+
+        pie_df.loc[pie_df["ban_pct"] < threshold, "name"] = "Other champions"
+
+        
+        pie_df = (
+            pie_df.groupby("name", as_index=False)
+            .agg({"ban_pct": "sum"})
+            .sort_values("ban_pct", ascending=False)
+        )
+
+        patch_label = input.patch_select().replace("patch_", "").replace(".csv", "")
+
+        fig = px.pie(
+            pie_df,
+            values="ban_pct",
+            names="name",
+            title=f"Ban % Distribution by Champion — Patch {patch_label}",
+            subtitle=f"Bans below {threshold} grouped into 'Other champions'",
+            hole=0.4
+        )
+
+        fig.update_traces(
+            textinfo="percent+label",
+            textposition="inside",
+            insidetextorientation="radial",
+            pull=[0.05 if n != "Other champions" else 0 for n in pie_df["name"]],
+        )
+
+        fig.update_layout(
+            showlegend=True,
+            legend_title="Champion",
+        )
+
+        return fig
+
+    @render_widget
+    def pie_chart_class_ban():
+        df = shared.get_patch(input.patch_select())
+
+        if df.empty:
+            return px.pie(title="No data available")
+
+        # Aggregate ban % by class
+        class_df = (
+            df.groupby("class", as_index=False)
+            .agg(total_ban_pct=("ban_pct", "sum"))
+            .sort_values("total_ban_pct", ascending=False)
+        )
+
+        patch_label = input.patch_select().replace("patch_", "").replace(".csv", "")
+
+        fig = px.pie(
+            class_df,
+            values="total_ban_pct",
+            names="class",
+            title=f"Ban % Share by Champion Class — Patch {patch_label}",
+            hole=0.3
+        )
+
+        fig.update_traces(
+            textinfo="percent+label",
+            textposition="inside",
+        )
+
+        fig.update_layout(
+            legend_title="Class",
+            showlegend=True,
+        )
+
+        return fig
+
+                       
+    
+
     @ reactive.effect
     def update_champ_choices():
         role = input.role_select()
