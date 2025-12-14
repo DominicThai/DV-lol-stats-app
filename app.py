@@ -62,8 +62,12 @@ app_ui = ui.page_navbar(
 ),
     # page 7
     ui.nav_panel("AI generated",
-                 ui.img(
-                     src="ai_slop.png", style="width: 700px; height: auto;"
+                 ui.div(
+                     ui.img(
+                         src="ai_slop.png",
+                         style="width: 700px; height: auto;"
+                         ),
+                     style="text-align: center;"
                      ),),
     
     # page 8
