@@ -65,7 +65,7 @@ app_ui = ui.page_navbar(
     
     #page 8
     ui.nav_panel("Animated",
-                 output_widget("animated_winrate_plot"),),
+                 ui.markdown("opens separately")),
     
   
 
@@ -521,8 +521,49 @@ def server(input, output, session):
         fig.show()
 
 
+    @reactive.effect
+    def show_animated_plot():
+        if input.page() != "Animated":
+            return
 
+        df = pd.read_csv("./data/all_patches_combined.csv", sep=";")
+
+        df["Patch"] = df["Patch"].astype(str)
+        for col in ["Pick %", "Win %", "Ban %"]:
+            df[col] = df[col].str.replace("%", "", regex=False).astype(float)
+
+        patch_split = df["Patch"].str.extract(r"(\d+)\.(\d+)")
+        df["patch_major"] = patch_split[0].astype(int)
+        df["patch_minor"] = patch_split[1].astype(int)
+        df = df.sort_values(["patch_major", "patch_minor"])
+
+        fig = px.scatter(
+            df,
+            x="Pick %",
+            y="Win %",
+            animation_frame="Patch",
+            animation_group="Name",
+            size="Ban %",
+            color="Class",
+            hover_name="Name",
+            range_x=[0, df["Pick %"].max() * 1.1],
+            range_y=[45, 60],
+            size_max=40,
+            title="Champion Win Rate Evolution Across Patches"
+        )
+
+        fig.update_layout(
+            xaxis_title="Pick %",
+            yaxis_title="Win %",
+            legend_title="Class",
+            template="plotly_white",
+            transition={"duration": 500},
+            height=650
+        )
+
+        fig.show()
     @ reactive.effect  
+    
     def update_champ_choices():
         role = input.role_select()
         champ_list = shared.get_champs_per_role(role)
