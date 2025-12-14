@@ -69,8 +69,9 @@ app_ui = ui.page_navbar(
         "Animated",
         ui.tags.iframe(
             src="animated_winrate.html",
-            style="width: 100%; height: 750px; border: none;"
+            style="width: 85%; height: 750px; border: none;"
         ),
+        output_widget("animated_winrate_plot"),
     ),
   
 
@@ -482,10 +483,49 @@ def server(input, output, session):
             )
         
     @render_widget
-    def animated_winrate_plot():
-        import pandas as pd
-        import plotly.express as px
+    def animated_winrate_plot():                                        #Because of the limitations on shinyapps, we attempt to open a separate window which runs smoother
+        df = pd.read_csv("./data/all_patches_combined.csv", sep=";")    #In the case that its not possible, an embedded HTML window is openend in the tab
+                                                                        #The animation is unfortunately not very smooth in the embedded window but it runs
+        df["Patch"] = df["Patch"].astype(str)                           #Its 3am and im slightly losing it
 
+        for col in ["Pick %", "Win %", "Ban %"]:
+            df[col] = df[col].str.replace("%", "", regex=False).astype(float)
+
+        patch_split = df["Patch"].str.extract(r"(\d+)\.(\d+)")
+        df["patch_major"] = patch_split[0].astype(int)
+        df["patch_minor"] = patch_split[1].astype(int)
+        df = df.sort_values(["patch_major", "patch_minor"])
+
+        fig = px.scatter(
+            df,
+            x="Pick %",
+            y="Win %",
+            animation_frame="Patch",
+            animation_group="Name",
+            size="Ban %",
+            color="Class",
+            hover_name="Name",
+            range_x=[0, df["Pick %"].max() * 1.1],
+            range_y=[45, 60],
+            size_max=40,
+            title="Champion Win Rate Evolution Across Patches"
+        )
+
+        fig.update_layout(
+            xaxis_title="Pick %",
+            yaxis_title="Win %",
+            legend_title="Class",
+            template="plotly_white",
+            transition={"duration": 500},
+            height=650
+
+        )
+
+        fig.show()    
+        
+    @render_widget
+    def animated_winrate_plot():
+        
         df = pd.read_csv("./data/all_patches_combined.csv", sep=";")
 
         df["Patch"] = df["Patch"].astype(str)
