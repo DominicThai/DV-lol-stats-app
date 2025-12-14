@@ -1,4 +1,5 @@
 import shared
+import subprocess
 from shiny import App, ui, reactive, render
 import seaborn as sns
 #from faicons import icon_svg
@@ -12,7 +13,7 @@ from ipywidgets import Image
 
 # This is the UI part of the app
 app_ui = ui.page_navbar(
-
+   
     # Page 1
     ui.nav_panel("Dataset",
         ui.card(ui.output_data_frame("champ_df"), height="600px")),
@@ -65,6 +66,16 @@ app_ui = ui.page_navbar(
     #page 8
     ui.nav_panel("Animated",
                  output_widget("animated_winrate_plot"),),
+
+    ui.nav_control(
+        ui.a(
+            "Animated (Opens new window)",
+            href="animated_winrate.html",
+            target="_blank",
+            style="text-decoration:none; color:inherit;"
+        )
+    ),
+
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -519,6 +530,10 @@ def server(input, output, session):
 
 
     @ reactive.effect
+    def launch_animation_server():
+        if input.page() == "Animated":
+            subprocess.Popen(["python", "animated_plot.py"]),
+    
     def update_champ_choices():
         role = input.role_select()
         champ_list = shared.get_champs_per_role(role)
