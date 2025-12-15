@@ -16,12 +16,12 @@ from pathlib import Path
 app_ui = ui.page_navbar(
    
     # Page 1
-    ui.nav_panel("Dataset",
-        ui.card(ui.output_data_frame("champ_df"), height="600px")),
+    #ui.nav_panel("Dataset",
+        #ui.card(ui.output_data_frame("champ_df"), height="600px")),
 
     # page 2
     ui.nav_panel("Bar graphs",
-                ui.h2("Top 10 Champions by Pick %"),
+                ui.h2("Top 10 Champions by Win, Ban, Pick %"),
                 ui.row(
                     ui.column(4, ui.output_plot("top10_win")),
                     ui.column(4, ui.output_plot("top10_ban")),
@@ -63,10 +63,12 @@ app_ui = ui.page_navbar(
     # page 7
     ui.nav_panel("AI generated",
                  ui.div(
+                     ui.h2("AI Generated Plot"),
                      ui.img(
                          src="ai_slop.png",
                          style="width: 700px; height: auto;"
                          ),
+                     ui.h3("The plot is generated through OpenAI's ChatGPT with the promt: “I want you to generate a graph based on the csv file I just provided. It should display how likely the champion is to be banned, the higher the win%”"),
                      style="text-align: center;"
                      ),),
     
