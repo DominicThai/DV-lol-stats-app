@@ -592,8 +592,7 @@ def server(input, output, session):
         
     @render.download(filename="DV E25 report group 13.pdf")
     def download_report():
-        pdf_path = Path("DV E25 report group 13.pdf")  # Must exist
-        return pdf_path
+        return "DV E25 report group 13.pdf"
         
 # Create the Shiny app object
 app=App(app_ui, server, static_assets=Path(__file__).parent / "www")
