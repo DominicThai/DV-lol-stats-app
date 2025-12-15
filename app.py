@@ -83,6 +83,15 @@ app_ui = ui.page_navbar(
     ),
   
 
+
+ui.nav_spacer(),
+ui.nav_control(
+    ui.download_button(
+        "download_report",
+        "Download PDF"
+    )
+),
+    
     #Other stuff
     title="DoPi.gg",
     id="page",
@@ -104,6 +113,7 @@ app_ui = ui.page_navbar(
             "patch_13.12.csv": "13.12",
         },
     ),
+    
 )
 
 
@@ -574,12 +584,16 @@ def server(input, output, session):
         fig.show()
 
 
-    
     @ reactive.effect  
     def update_champ_choices():
         role = input.role_select()
         champ_list = shared.get_champs_per_role(role)
         ui.update_select(id="select_champ", choices=champ_list, session=session)
+        
+    @render.download(filename="DV E25 report group 13.pdf")
+    def download_report():
+        pdf_path = Path("DV E25 report group 13.pdf")  # Must exist
+        return pdf_path
         
 # Create the Shiny app object
 app=App(app_ui, server, static_assets=Path(__file__).parent / "www")
